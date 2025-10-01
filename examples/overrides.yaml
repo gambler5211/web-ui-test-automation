@@ -1,0 +1,9 @@
+# Use when a line needs a custom mapping the regex/LLM doesn't produce.
+# Keys are the exact step text (without Given/When/Then keywords).
+'I click "Sign in"':
+  action: click
+  target:
+    role: button
+    name: Sign in
+
+

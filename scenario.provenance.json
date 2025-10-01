@@ -1,0 +1,72 @@
+[
+  {
+    "line": "I open \"/login\"",
+    "source": "regex",
+    "step": {
+      "action": "open_url",
+      "url": "/login"
+    }
+  },
+  {
+    "line": "I get_dom_distill",
+    "source": "regex",
+    "step": {
+      "action": "get_dom_distill"
+    }
+  },
+  {
+    "line": "I get_a11y_tree",
+    "source": "regex",
+    "step": {
+      "action": "get_a11y_tree"
+    }
+  },
+  {
+    "line": "I type \"gambler5211\" into the \"username\" field",
+    "source": "regex",
+    "step": {
+      "action": "type",
+      "target": {
+        "role": "textbox",
+        "name": "username"
+      },
+      "text": "gambler5211"
+    }
+  },
+  {
+    "line": "I type \"Vg@12345678\" into the \"Password\" field and press enter",
+    "source": "regex",
+    "step": {
+      "action": "type",
+      "target": {
+        "role": "textbox",
+        "name": "Password"
+      },
+      "text": "Vg@12345678",
+      "press_enter": true
+    }
+  },
+  {
+    "line": "I should see text \"Incorrect username or password\"",
+    "source": "regex",
+    "step": {
+      "action": "get_text",
+      "target": {
+        "text": "Incorrect username or password"
+      },
+      "save_as": "__seen"
+    }
+  },
+  {
+    "line": "I should see text \"Incorrect username or password\"",
+    "source": "regex",
+    "step": {
+      "action": "assert",
+      "predicate": {
+        "op": "contains",
+        "left": "${__seen}",
+        "right": "Incorrect username or password"
+      }
+    }
+  }
+]

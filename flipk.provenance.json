@@ -1,0 +1,71 @@
+[
+  {
+    "line": "I open \"/login\"",
+    "source": "regex",
+    "step": {
+      "action": "open_url",
+      "url": "/login"
+    }
+  },
+  {
+    "line": "I get_dom_distill",
+    "source": "regex",
+    "step": {
+      "action": "get_dom_distill"
+    }
+  },
+  {
+    "line": "I get_a11y_tree",
+    "source": "regex",
+    "step": {
+      "action": "get_a11y_tree"
+    }
+  },
+  {
+    "line": "I type \"vishalbyjus22@gmail.com\" into the \"Email\" field",
+    "source": "regex",
+    "step": {
+      "action": "type",
+      "target": {
+        "role": "textbox",
+        "name": "Email"
+      },
+      "text": "vishalbyjus22@gmail.com"
+    }
+  },
+  {
+    "line": "I should see text \"Please enter the OTP sent to\"",
+    "source": "regex",
+    "step": {
+      "action": "get_text",
+      "target": {
+        "text": "Please enter the OTP sent to"
+      },
+      "save_as": "__seen"
+    }
+  },
+  {
+    "line": "I should see text \"Please enter the OTP sent to\"",
+    "source": "regex",
+    "step": {
+      "action": "assert",
+      "predicate": {
+        "op": "contains",
+        "left": "${__seen}",
+        "right": "Please enter the OTP sent to"
+      }
+    }
+  },
+  {
+    "line": "the page title contains \"Verify\"",
+    "source": "regex",
+    "step": {
+      "action": "assert",
+      "predicate": {
+        "op": "contains",
+        "left": "${title}",
+        "right": "Verify"
+      }
+    }
+  }
+]

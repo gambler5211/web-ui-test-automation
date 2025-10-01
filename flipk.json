@@ -1,0 +1,49 @@
+{
+  "meta": {
+    "name": "Search for monitors",
+    "base_url": "https://www.flipkart.com"
+  },
+  "steps": [
+    {
+      "action": "open_url",
+      "url": "/login"
+    },
+    {
+      "action": "get_dom_distill"
+    },
+    {
+      "action": "get_a11y_tree"
+    },
+    {
+      "action": "type",
+      "target": {
+        "role": "textbox",
+        "name": "Email"
+      },
+      "text": "vishalbyjus22@gmail.com"
+    },
+    {
+      "action": "get_text",
+      "target": {
+        "text": "Please enter the OTP sent to"
+      },
+      "save_as": "__seen"
+    },
+    {
+      "action": "assert",
+      "predicate": {
+        "op": "contains",
+        "left": "${__seen}",
+        "right": "Please enter the OTP sent to"
+      }
+    },
+    {
+      "action": "assert",
+      "predicate": {
+        "op": "contains",
+        "left": "${title}",
+        "right": "Verify"
+      }
+    }
+  ]
+}

@@ -1,0 +1,11 @@
+[project]
+name = "automation-phase1"
+version = "0.1.0"
+description = "Hybrid Gherkin→JSON compiler (regex-first, LLM fallback)"
+authors = [{name = "You"}]
+requires-python = ">=3.11"
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+
+

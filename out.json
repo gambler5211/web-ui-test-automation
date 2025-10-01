@@ -1,0 +1,57 @@
+{
+  "meta": {
+    "name": "login for git",
+    "base_url": "https://www.github.com"
+  },
+  "steps": [
+    {
+      "action": "open_url",
+      "url": "/login"
+    },
+    {
+      "action": "get_dom_distill"
+    },
+    {
+      "action": "get_a11y_tree"
+    },
+    {
+      "action": "type",
+      "target": {
+        "role": "textbox",
+        "name": "username"
+      },
+      "text": "gambler5211"
+    },
+    {
+      "action": "type",
+      "target": {
+        "role": "textbox",
+        "name": "Password"
+      },
+      "text": "Vg@12345678"
+    },
+    {
+      "action": "get_text",
+      "target": {
+        "text": "logged in"
+      },
+      "save_as": "__seen"
+    },
+    {
+      "action": "assert",
+      "predicate": {
+        "op": "contains",
+        "left": "${__seen}",
+        "right": "logged in"
+      }
+    },
+    {
+      "action": "assert",
+      "predicate": {
+        "op": "contains",
+        "left": "${title}",
+        "right": "GitHub"
+      }
+    }
+  ]
+}
