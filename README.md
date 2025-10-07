@@ -100,6 +100,15 @@ Artifacts:
   - `And I get_a11y_tree`
   Inspect generated JSON in `proofs/run_*/` to refine selectors or extend regex rules.
 
+## Web UI
+Prefer a visual workflow? Start the lightweight web server and paste your feature text into the browser:
+
+```
+python -m automation_phase1.webui --host 0.0.0.0 --port 8000
+```
+
+Then visit `http://localhost:8000` to compile features and inspect provenance side-by-side. LLM fallback obeys the same environment configuration as the CLI.
+
 ## Design notes
 - Deterministic first; LLM is a last resort behind a flag
 - SQLite cache for compiles (when `--cache` provided)
