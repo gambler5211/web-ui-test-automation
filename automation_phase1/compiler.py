@@ -66,6 +66,22 @@ class Compiler:
                         cache_path: Optional[Path] = None
                         ) -> CompileResult:
         feature_text = feature_path.read_text(encoding="utf-8")
+        overrides = self._load_overrides(overrides_path)
+        return self.compile_text(
+            feature_text=feature_text,
+            scenario_name=scenario_name,
+            base_url=base_url,
+            overrides=overrides,
+            cache_path=cache_path,
+        )
+
+    def compile_text(self,
+                     feature_text: str,
+                     scenario_name: Optional[str] = None,
+                     base_url: Optional[str] = None,
+                     overrides: Optional[dict[str, dict]] = None,
+                     cache_path: Optional[Path] = None
+                     ) -> CompileResult:
         parser = Parser()
         doc = parser.parse(TokenScanner(feature_text))
 
@@ -96,7 +112,7 @@ class Compiler:
         steps_out: list[Step] = []
         provenance: list[CompileProvenance] = []
 
-        overrides = self._load_overrides(overrides_path)
+        overrides = overrides or {}
         if cache_path:
             self._cache_connect(cache_path)
 
