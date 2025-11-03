@@ -3,6 +3,7 @@ from typing import Literal, Optional, List, Dict, Any
 from pydantic import BaseModel, Field
 
 Action = Literal[
+    "natural_language",
     "open_url",
     "click",
     "type",

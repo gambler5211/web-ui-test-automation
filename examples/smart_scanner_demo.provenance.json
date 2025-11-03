@@ -1,0 +1,78 @@
+[
+  {
+    "line": "I open \"https://www.google.com\"",
+    "source": "regex",
+    "step": {
+      "action": "open_url",
+      "url": "https://www.google.com"
+    }
+  },
+  {
+    "line": "I click \"Search\"",
+    "source": "regex",
+    "step": {
+      "action": "click",
+      "target": {
+        "role": "button",
+        "name": "Search"
+      }
+    }
+  },
+  {
+    "line": "I type \"playwright automation\" into the \"Search\" field",
+    "source": "regex",
+    "step": {
+      "action": "type",
+      "target": {
+        "role": "textbox",
+        "name": "Search"
+      },
+      "text": "playwright automation"
+    }
+  },
+  {
+    "line": "I click \"Google Search\"",
+    "source": "regex",
+    "step": {
+      "action": "click",
+      "target": {
+        "role": "button",
+        "name": "Google Search"
+      }
+    }
+  },
+  {
+    "line": "I should see text \"playwright automation\"",
+    "source": "regex",
+    "step": {
+      "action": "get_text",
+      "target": {
+        "text": "playwright automation"
+      },
+      "save_as": "__seen"
+    }
+  },
+  {
+    "line": "I should see text \"playwright automation\"",
+    "source": "regex",
+    "step": {
+      "action": "assert",
+      "predicate": {
+        "op": "contains",
+        "left": "${__seen}",
+        "right": "playwright automation"
+      }
+    }
+  },
+  {
+    "line": "I click the link \"playwright automation\"",
+    "source": "regex",
+    "step": {
+      "action": "click",
+      "target": {
+        "role": "link",
+        "name": "playwright automation"
+      }
+    }
+  }
+]

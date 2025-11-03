@@ -5,8 +5,13 @@ pytest>=8.0.0
 pytest-asyncio>=0.23.0
 playwright>=1.45.0
 
-# (Optional for LLM fallback; safe to install later)
+# LLM Providers (at least one required for AI features)
+# Install based on your preference:
+#   - Gemini (Google): pip install google-generativeai
+#   - OpenAI (GPT): pip install openai
+#   - Claude (Anthropic): pip install anthropic
 openai>=1.40.0
 google-generativeai>=0.7.0
+anthropic>=0.39.0
 
 

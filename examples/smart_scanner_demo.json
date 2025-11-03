@@ -1,0 +1,55 @@
+{
+  "meta": {
+    "name": "Dynamic content loading with auto-scan"
+  },
+  "steps": [
+    {
+      "action": "open_url",
+      "url": "https://www.google.com"
+    },
+    {
+      "action": "click",
+      "target": {
+        "role": "button",
+        "name": "Search"
+      }
+    },
+    {
+      "action": "type",
+      "target": {
+        "role": "textbox",
+        "name": "Search"
+      },
+      "text": "playwright automation"
+    },
+    {
+      "action": "click",
+      "target": {
+        "role": "button",
+        "name": "Google Search"
+      }
+    },
+    {
+      "action": "get_text",
+      "target": {
+        "text": "playwright automation"
+      },
+      "save_as": "__seen"
+    },
+    {
+      "action": "assert",
+      "predicate": {
+        "op": "contains",
+        "left": "${__seen}",
+        "right": "playwright automation"
+      }
+    },
+    {
+      "action": "click",
+      "target": {
+        "role": "link",
+        "name": "playwright automation"
+      }
+    }
+  ]
+}

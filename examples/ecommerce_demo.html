@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>E-Commerce Demo</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .header {
+            background: #333;
+            color: white;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        .search-bar {
+            margin: 20px 0;
+        }
+        .search-bar input {
+            width: 300px;
+            padding: 10px;
+            font-size: 16px;
+        }
+        .search-bar button {
+            padding: 10px 20px;
+            font-size: 16px;
+            background: #007bff;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+        .products {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 20px;
+            margin: 20px 0;
+        }
+        .product {
+            border: 1px solid #ddd;
+            padding: 15px;
+            border-radius: 5px;
+        }
+        .product h3 {
+            margin-top: 0;
+        }
+        .product button {
+            background: #28a745;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            cursor: pointer;
+            width: 100%;
+        }
+        .cart {
+            position: fixed;
+            right: 20px;
+            top: 100px;
+            background: white;
+            border: 2px solid #333;
+            padding: 20px;
+            border-radius: 5px;
+            min-width: 250px;
+        }
+        .cart-item {
+            padding: 10px 0;
+            border-bottom: 1px solid #eee;
+        }
+        .checkout-btn {
+            background: #ff6b6b;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            cursor: pointer;
+            width: 100%;
+            margin-top: 10px;
+        }
+        .hidden {
+            display: none;
+        }
+        .results-message {
+            margin: 20px 0;
+            padding: 10px;
+            background: #e7f3ff;
+            border-left: 4px solid #007bff;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>E-Commerce Store</h1>
+        <p>Welcome to our online shop!</p>
+    </div>
+
+    <div class="search-bar">
+        <input type="text" id="searchInput" placeholder="Search for products..." aria-label="Search">
+        <button onclick="performSearch()" aria-label="Search">Search</button>
+    </div>
+
+    <div id="resultsMessage" class="results-message hidden"></div>
+
+    <div class="products" id="productsContainer">
+        <div class="product" data-name="iPhone 15 Pro">
+            <h3>iPhone 15 Pro</h3>
+            <p>Latest Apple smartphone with A17 chip</p>
+            <p><strong>$999</strong></p>
+            <button onclick="addToCart('iPhone 15 Pro', 999)">Add to Cart</button>
+        </div>
+
+        <div class="product" data-name="MacBook Air">
+            <h3>MacBook Air</h3>
+            <p>Lightweight laptop with M2 chip</p>
+            <p><strong>$1199</strong></p>
+            <button onclick="addToCart('MacBook Air', 1199)">Add to Cart</button>
+        </div>
+
+        <div class="product" data-name="AirPods Pro">
+            <h3>AirPods Pro</h3>
+            <p>Wireless earbuds with active noise cancellation</p>
+            <p><strong>$249</strong></p>
+            <button onclick="addToCart('AirPods Pro', 249)">Add to Cart</button>
+        </div>
+
+        <div class="product" data-name="iPad Air">
+            <h3>iPad Air</h3>
+            <p>Powerful tablet with M1 chip</p>
+            <p><strong>$599</strong></p>
+            <button onclick="addToCart('iPad Air', 599)">Add to Cart</button>
+        </div>
+    </div>
+
+    <div class="cart">
+        <h2>Shopping Cart</h2>
+        <div id="cartItems"></div>
+        <div id="cartTotal" style="margin-top: 10px; font-weight: bold;">Total: $0</div>
+        <button class="checkout-btn" onclick="checkout()">Checkout</button>
+    </div>
+
+    <script>
+        let cart = [];
+        let total = 0;
+
+        function addToCart(name, price) {
+            cart.push({ name, price });
+            total += price;
+            updateCart();
+            alert(`${name} added to cart!`);
+        }
+
+        function updateCart() {
+            const cartItems = document.getElementById('cartItems');
+            const cartTotal = document.getElementById('cartTotal');
+            
+            cartItems.innerHTML = cart.map(item => 
+                `<div class="cart-item">${item.name} - $${item.price}</div>`
+            ).join('');
+            
+            cartTotal.textContent = `Total: $${total}`;
+        }
+
+        function performSearch() {
+            const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+            const products = document.querySelectorAll('.product');
+            let foundCount = 0;
+
+            products.forEach(product => {
+                const productName = product.dataset.name.toLowerCase();
+                if (productName.includes(searchTerm)) {
+                    product.style.display = 'block';
+                    foundCount++;
+                } else {
+                    product.style.display = 'none';
+                }
+            });
+
+            const resultsMessage = document.getElementById('resultsMessage');
+            resultsMessage.classList.remove('hidden');
+            resultsMessage.textContent = `Found ${foundCount} products matching "${searchTerm}"`;
+        }
+
+        function checkout() {
+            if (cart.length === 0) {
+                alert('Your cart is empty!');
+                return;
+            }
+            
+            alert(`Order placed! Total: $${total}\nThank you for your purchase!`);
+            cart = [];
+            total = 0;
+            updateCart();
+        }
+    </script>
+</body>
+</html>
+
+
+

@@ -22,7 +22,7 @@
     }
   },
   {
-    "line": "I type \"gambler5211\" into the \"username\" field",
+    "line": "I type \"gambler5211\" into the \"username\" field and press enter",
     "source": "regex",
     "step": {
       "action": "type",
@@ -30,11 +30,12 @@
         "role": "textbox",
         "name": "username"
       },
-      "text": "gambler5211"
+      "text": "gambler5211",
+      "press_enter": true
     }
   },
   {
-    "line": "I type \"Vg@12345678\" into the \"Password\" field and press enter",
+    "line": "I type \"RBAsuU@1\" into the \"Password\" field and press enter",
     "source": "regex",
     "step": {
       "action": "type",
@@ -42,7 +43,7 @@
         "role": "textbox",
         "name": "Password"
       },
-      "text": "Vg@12345678",
+      "text": "RBAsuU@1",
       "press_enter": true
     }
   },

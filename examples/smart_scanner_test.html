@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart Scanner Test Page</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+        }
+        button {
+            padding: 10px 20px;
+            margin: 10px 5px;
+            font-size: 16px;
+            cursor: pointer;
+        }
+        .hidden {
+            display: none;
+        }
+        .result {
+            margin-top: 20px;
+            padding: 15px;
+            background: #f0f0f0;
+            border-radius: 5px;
+        }
+        #dynamicContent {
+            margin-top: 20px;
+            padding: 15px;
+            background: #e8f5e9;
+            border-radius: 5px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Smart Scanner Test Page</h1>
+    <p>This page demonstrates the Smart Scanner Agent's ability to handle dynamic content.</p>
+    
+    <div>
+        <h2>Test 1: Delayed Element Appearance</h2>
+        <button id="showDelayedBtn">Show Delayed Content</button>
+        <div id="delayedContent" class="hidden result">
+            <p>This content appeared after 2 seconds!</p>
+            <button id="nextStepBtn">Next Step</button>
+        </div>
+    </div>
+    
+    <div>
+        <h2>Test 2: Dynamic Form</h2>
+        <button id="loadFormBtn">Load Dynamic Form</button>
+        <div id="dynamicForm" class="hidden result">
+            <form>
+                <label for="username">Username:</label>
+                <input type="text" id="username" name="username"><br><br>
+                <label for="email">Email:</label>
+                <input type="email" id="email" name="email"><br><br>
+                <button type="button" id="submitFormBtn">Submit</button>
+            </form>
+        </div>
+    </div>
+    
+    <div id="dynamicContent" class="hidden">
+        <h3>Success!</h3>
+        <p id="resultMessage"></p>
+    </div>
+
+    <script>
+        // Test 1: Delayed content
+        document.getElementById('showDelayedBtn').addEventListener('click', function() {
+            this.disabled = true;
+            this.textContent = 'Loading...';
+            
+            setTimeout(function() {
+                document.getElementById('delayedContent').classList.remove('hidden');
+            }, 2000);
+        });
+        
+        document.getElementById('nextStepBtn')?.addEventListener('click', function() {
+            alert('Next step clicked! Smart Scanner detected this element.');
+        });
+        
+        // Test 2: Dynamic form
+        document.getElementById('loadFormBtn').addEventListener('click', function() {
+            this.disabled = true;
+            this.textContent = 'Loading Form...';
+            
+            setTimeout(function() {
+                document.getElementById('dynamicForm').classList.remove('hidden');
+            }, 1500);
+        });
+        
+        document.getElementById('submitFormBtn')?.addEventListener('click', function() {
+            const username = document.getElementById('username').value;
+            const email = document.getElementById('email').value;
+            
+            if (username && email) {
+                document.getElementById('dynamicContent').classList.remove('hidden');
+                document.getElementById('resultMessage').textContent = 
+                    `Form submitted for ${username} (${email})`;
+            } else {
+                alert('Please fill in all fields');
+            }
+        });
+    </script>
+</body>
+</html>
+

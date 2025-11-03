@@ -20,8 +20,9 @@ CREATE TABLE IF NOT EXISTS cache (
 """
 
 class Compiler:
-    def __init__(self, use_llm: bool = False, model: str = "gpt-4o-mini"):
+    def __init__(self, use_llm: bool = False, model: str = "gpt-4o-mini", natural_language_mode: str = "auto"):
         self.use_llm = use_llm
+        self.natural_language_mode = natural_language_mode  # "auto", "always", "never"
         self.llm: Optional[LLMCompiler] = None
         if use_llm:
             try:
@@ -105,6 +106,13 @@ class Compiler:
             text = step["text"].strip()
             line = f"{text}"  # keep lean; we don't rely on keyword
 
+            # Mode: always - treat everything as natural language
+            if self.natural_language_mode == "always":
+                s = Step(action="natural_language", text=text)
+                steps_out.append(s)
+                provenance.append(CompileProvenance(line=text, source="regex", step=s))
+                continue
+
             # 1) Overrides
             if text in overrides:
                 data = overrides[text]
@@ -144,8 +152,15 @@ class Compiler:
                 self._cache_put(key, s)
                 continue
 
-            # 5) Give up
-            raise ValueError(f"Unrecognized step and LLM disabled: {text}")
+            # 5) Natural language fallback (mode: auto)
+            if self.natural_language_mode == "auto":
+                s = Step(action="natural_language", text=text)
+                steps_out.append(s)
+                provenance.append(CompileProvenance(line=text, source="regex", step=s))
+                continue
+
+            # 6) Give up (mode: never)
+            raise ValueError(f"Unrecognized step and natural language disabled: {text}")
 
         scenario = Scenario(meta=meta, steps=steps_out)
         return CompileResult(scenario=scenario, provenance=provenance)

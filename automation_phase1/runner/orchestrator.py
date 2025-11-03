@@ -10,12 +10,15 @@ from urllib.parse import urljoin
 
 from ..schemas import Scenario
 from .browser_manager import browser_session
-from .tools import Ctx, open_url, click, type_text, select, wait, get_text, get_a11y_tree, get_dom_distill, exists, count, assert_
+from .tools import Ctx, open_url, click, type_text, select, wait, get_text, get_a11y_tree, get_dom_distill, exists, count, assert_, execute_natural_language
 from .reporting import JUnitWriter
+from .agents.smart_wait_agent import SmartWaitAgent, perform_wait, collect_light_dom_snapshot
+from .agents.smart_scanner_agent import SmartScannerAgent, perform_scan
 
 
 # Tool mapping
 TOOL_MAP = {
+    "natural_language": execute_natural_language,
     "open_url": open_url,
     "click": click,
     "type": type_text,
@@ -38,7 +41,9 @@ async def run_scenario(
     video: bool = False,
     trace: bool = False,
     har: bool = False,
-    use_llm_resolver: bool = False
+    use_llm_resolver: bool = False,
+    use_smart_wait: bool = True,
+    autoscan: str = "smart"  # "off", "light", "smart", "full"
 ) -> Path:
     """Run a scenario and return the proofs directory path."""
     
@@ -54,6 +59,14 @@ async def run_scenario(
     results: List[Dict[str, Any]] = []
     variables: Dict[str, Any] = {}
     
+    # Initialize smart wait decider
+    decider: SmartWaitAgent | None = SmartWaitAgent(cache_path=output_dir / "wait_cache.sqlite3") if use_smart_wait else None
+    
+    # Initialize smart scanner agent
+    scanner: SmartScannerAgent | None = None
+    if autoscan != "off":
+        scanner = SmartScannerAgent(cache_path=output_dir / "scanner_cache.sqlite3")
+    
     async with browser_session(
         headless=not headed,
         proofs_dir=proofs_dir,
@@ -62,7 +75,11 @@ async def run_scenario(
         har=har
     ) as page:
         ctx = Ctx(page=page, proofs_dir=proofs_dir, use_llm_resolver=use_llm_resolver)
-        # Note: use_llm_resolver flag reserved; wiring happens in selectors if enabled in future
+        
+        # Store scanner in context for resolver access
+        if scanner:
+            ctx.scanner = scanner
+            ctx.autoscan_mode = autoscan
         
         for step_idx, step in enumerate(scenario.steps, 1):
             step_name = f"{step_idx:03d} {step.action}"
@@ -126,6 +143,12 @@ async def run_scenario(
                 elif step.action == "assert":
                     await tool_func(ctx, predicate=step.predicate.model_dump() if step.predicate else {}, variables=variables, step_num=step_idx)
                 
+                elif step.action == "natural_language":
+                    result = await tool_func(ctx, step.text or "", step_idx)
+                    # Store result for debugging/reporting
+                    if step.save_as:
+                        variables[step.save_as] = result
+                
                 # Post-step variable capture for get_text
                 if step.action == "get_text" and step.save_as:
                     # read saved text file back or skip (we can set None safely)
@@ -141,6 +164,56 @@ async def run_scenario(
                     "duration_ms": int((time.time() - start_time) * 1000),
                     "url": page.url
                 })
+                
+                # Execute smart scan after mutating step (if enabled)
+                if scanner and step.action in ("open_url", "click", "type", "select"):
+                    try:
+                        next_step = scenario.steps[step_idx] if step_idx < len(scenario.steps) else None
+                        
+                        # Decide scan strategy
+                        scan_decision = await scanner.decide_scan_strategy(
+                            trigger="after_step",
+                            step_context=step.model_dump(exclude_none=True),
+                            page_url=page.url
+                        )
+                        
+                        # Perform scan
+                        if scan_decision.scan_type != "skip":
+                            scan_data = await perform_scan(page, scan_decision, proofs_dir)
+                            scanner.record_scan(scan_decision.scan_type, page.url)
+                            
+                            # Store scan data in context for resolver
+                            ctx.last_scan_data = scan_data
+                            ctx.last_scan_type = scan_decision.scan_type
+                            
+                            results.append({
+                                "name": f"{step_idx:03d} {step.action}#scan",
+                                "duration_ms": 0,
+                                "url": page.url,
+                                "scan_type": scan_decision.scan_type,
+                                "scan_reason": scan_decision.reason
+                            })
+                    except Exception as scan_err:
+                        print(f"[Smart Scanner] Error during scan: {scan_err}")
+                
+                # Execute smart wait after mutating step (if enabled and not last step)
+                if decider and step.action in ("open_url", "click", "type", "select") and step_idx < len(scenario.steps):
+                    try:
+                        next_step = scenario.steps[step_idx]
+                        decision = await decider.decide_wait_strategy(
+                            current_step=step.model_dump(exclude_none=True),
+                            next_step=next_step.model_dump(exclude_none=True),
+                            page_state=await collect_light_dom_snapshot(page)
+                        )
+                        ok = await perform_wait(page, decision)
+                        results.append({
+                            "name": f"{step_idx:03d} {step.action}#wait",
+                            "duration_ms": 0,
+                            "url": page.url,
+                            "stabilized": ok
+                        })
+                    except Exception as wait_err:
+                        print(f"[Smart Wait] Error during smart wait: {wait_err}")
                 
             except Exception as e:
                 # Save error screenshot

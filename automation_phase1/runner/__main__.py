@@ -15,6 +15,9 @@ async def main():
     parser.add_argument("--trace", action="store_true", help="Record Playwright trace")
     parser.add_argument("--har", action="store_true", help="Record network HAR file")
     parser.add_argument("--use-llm-resolver", action="store_true", help="Enable LLM-based target resolver fallback")
+    parser.add_argument("--smart-wait", action="store_true", default=True, help="Enable smart waiting with LLM (default: enabled)")
+    parser.add_argument("--no-smart-wait", action="store_false", dest="smart_wait", help="Disable smart waiting")
+    parser.add_argument("--autoscan", choices=["off", "light", "smart", "full"], default="smart", help="Auto-scan mode: off (disabled), light (fast scans only), smart (LLM decides), full (always full scans). Default: smart")
     
     args = parser.parse_args()
     
@@ -33,7 +36,9 @@ async def main():
         video=args.video,
         trace=args.trace,
         har=args.har,
-        use_llm_resolver=args.use_llm_resolver
+        use_llm_resolver=args.use_llm_resolver,
+        use_smart_wait=args.smart_wait,
+        autoscan=args.autoscan
     )
     
     print(f"Scenario execution completed. Proofs saved to: {proofs_dir}")

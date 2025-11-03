@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8"/>
+    <title>Dynamic Form Demo - Smart Wait</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 40px; }
+        .hidden { display: none; }
+        input, button { padding: 10px; margin: 5px; font-size: 16px; }
+        #message { margin-top: 20px; padding: 10px; background: #d4edda; display: none; }
+    </style>
+</head>
+<body>
+    <h1>Dynamic Login Form - Smart Wait Demo</h1>
+    <p>This form demonstrates smart waiting for dynamic content.</p>
+    
+    <form id="loginForm">
+        <div id="step1">
+            <label>Email <input id="email" aria-label="Email" type="email"/></label>
+            <button type="button" id="nextBtn">Next</button>
+        </div>
+        
+        <div id="step2" class="hidden">
+            <label>Password <input id="password" aria-label="Password" type="password"/></label>
+            <button type="submit">Login</button>
+        </div>
+    </form>
+    
+    <div id="message" role="alert">Login successful! Welcome to the dashboard.</div>
+    
+    <script>
+        // Simulate dynamic password field appearing after clicking Next
+        document.getElementById('nextBtn').addEventListener('click', function() {
+            console.log('Next clicked, showing password field...');
+            
+            // Simulate network delay
+            setTimeout(function() {
+                document.getElementById('step1').style.display = 'none';
+                document.getElementById('step2').classList.remove('hidden');
+            }, 1000); // 1 second delay to simulate API call
+        });
+        
+        // Simulate form submission with delay
+        document.getElementById('loginForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            console.log('Form submitted, processing...');
+            
+            // Simulate server processing
+            setTimeout(function() {
+                document.getElementById('message').style.display = 'block';
+            }, 1500); // 1.5 second delay
+        });
+    </script>
+</body>
+</html>
+
+

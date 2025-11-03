@@ -5,7 +5,7 @@ import asyncio
 from pathlib import Path
 from typing import Any, Dict, Optional
 from playwright.async_api import Page
-from ..schemas import Target
+from ..schemas import Target, Step
 from .selectors import resolve, maybe_exists
 
 
@@ -15,6 +15,10 @@ class Ctx:
     page: Page
     proofs_dir: Path
     use_llm_resolver: bool = False
+    scanner: Optional[Any] = None  # SmartScannerAgent instance
+    autoscan_mode: str = "off"  # "off", "light", "smart", "full"
+    last_scan_data: Optional[Dict[str, Any]] = None
+    last_scan_type: Optional[str] = None
 
 
 async def open_url(ctx: Ctx, url: str, step_num: int) -> None:
@@ -231,3 +235,74 @@ async def assert_(ctx: Ctx, predicate: dict, variables: dict, step_num: int, **_
     shot = _next_shot(ctx.proofs_dir, "assert", step_num)
     await ctx.page.screenshot(path=shot)
     return {"screenshot": str(shot)}
+
+
+async def execute_natural_language(ctx: Ctx, instruction: str, step_num: int) -> Dict[str, Any]:
+    """Execute a natural language instruction using AI agent."""
+    from .agents.natural_language_agent import NaturalLanguageAgent
+    
+    print(f"[Natural Language] Executing: {instruction}")
+    
+    # Initialize the agent
+    agent = NaturalLanguageAgent()
+    
+    # Get page context
+    page_context = await agent.get_page_context(ctx.page)
+    
+    # Plan actions
+    planned_actions = await agent.plan_actions(instruction, page_context)
+    
+    # Execute each planned action
+    executed_actions = []
+    for i, action_data in enumerate(planned_actions):
+        action_type = action_data.get("action")
+        print(f"[Natural Language] Sub-action {i+1}/{len(planned_actions)}: {action_type}")
+        
+        try:
+            if action_type == "click":
+                target_data = action_data.get("target", {})
+                target = Target(**target_data) if target_data else None
+                if target:
+                    await click(ctx, target, step_num)
+                    executed_actions.append(action_data)
+            
+            elif action_type == "type":
+                target_data = action_data.get("target", {})
+                target = Target(**target_data) if target_data else None
+                text = action_data.get("text", "")
+                press_enter = action_data.get("press_enter", False)
+                press_keys = action_data.get("press_keys")
+                if target:
+                    await type_text(ctx, target, text, step_num, press_enter=press_enter, press_keys=press_keys)
+                    executed_actions.append(action_data)
+            
+            elif action_type == "select":
+                target_data = action_data.get("target", {})
+                target = Target(**target_data) if target_data else None
+                select_value = action_data.get("select_value", "")
+                if target:
+                    await select(ctx, target, select_value, step_num)
+                    executed_actions.append(action_data)
+            
+            elif action_type == "wait":
+                wait_ms = action_data.get("wait_ms", 0)
+                await wait(ctx, wait_ms, step_num)
+                executed_actions.append(action_data)
+            
+            else:
+                print(f"[Natural Language] Warning: Unknown action type '{action_type}'")
+        
+        except Exception as e:
+            print(f"[Natural Language] Error executing sub-action: {e}")
+            raise  # Re-raise to trigger error handling in orchestrator
+    
+    # Take final screenshot
+    screenshot_path = ctx.proofs_dir / f"step_{step_num:03d}_natural_language.png"
+    await ctx.page.screenshot(path=screenshot_path)
+    
+    return {
+        "instruction": instruction,
+        "planned_actions": planned_actions,
+        "executed_actions": executed_actions,
+        "screenshot": str(screenshot_path)
+    }

@@ -1,45 +1,72 @@
 from __future__ import annotations
 import json
-import os
 from typing import Any, Dict, Optional
+
+from ...llm_providers import LLMProviderFactory, BaseLLMProvider
 
 
 PROMPT = (
     "You are a selector resolver for web automation. Given a user's intent (action/target/text) "
     "and page inventories (a11y_tree, dom_distill), propose a Target JSON.\n\n"
-    "CRITICAL: For textbox inputs with empty or missing 'name' in a11y_tree:\n"
-    "- Count how many textbox elements exist\n"
-    "- If multiple textboxes, use CSS to target the specific form/position\n"
-    "- Example: Login page email field → {\"css\": \"form input[type='text']:nth-of-type(1)\"}\n"
-    "- Example: Search box input → can use role if it has unique name\n\n"
-    "Rules:\n"
-    "1. NEVER use 'text' selector for input elements\n"
-    "2. Check a11y_tree for role='textbox' with name=\"\" (empty) - use CSS\n"
-    "3. For login/email inputs with no attributes: {\"css\": \"input[type='text']\"}\n\n"
-    "Return ONLY a single JSON object with ONE of: role, name, label, placeholder, text, or css."
+    "Principles:\n"
+    "- Prefer accessible, stable selectors: role+name when unique; otherwise label or placeholder; CSS last.\n"
+    "- Infer the most appropriate role from a11y_tree for the given accessible name (e.g., textbox vs combobox vs searchbox).\n"
+    "- If multiple candidates share the same name, pick the one most relevant to the action (type → text entry control; click → button/link).\n"
+    "- Avoid brittle text matches for inputs; avoid deep CSS unless necessary.\n\n"
+    "Inventory use:\n"
+    "- Use a11y_tree to find nodes by accessible name; read their role to choose role.\n"
+    "- Use dom_distill to disambiguate when names are duplicated (e.g., input[type=search]).\n\n"
+    "Output:\n"
+    "Return ONLY one JSON object with ONE of these strategies: {role+name} | {label} | {placeholder} | {text} | {css}.\n"
 )
 
 
 class LLMResolverAgent:
-    def __init__(self, model: str | None = None, temperature: float = 0.0, max_tokens: int = 256):
-        # Provider auto-detect (reuse envs from llm_client): OpenAI or Gemini
-        self.provider = None
-        self.api_key = None
-        if os.getenv("OPENAI_API_KEY"):
-            self.provider = "openai"
-            self.api_key = os.getenv("OPENAI_API_KEY")
-        elif os.getenv("GOOGLE_API_KEY"):
-            self.provider = "gemini"
-            self.api_key = os.getenv("GOOGLE_API_KEY")
-        self.model = model or ("gpt-4o-mini" if self.provider == "openai" else "gemini-2.5-flash")
+    def __init__(
+        self, 
+        provider: Optional[str] = None, 
+        model: Optional[str] = None,
+        temperature: float = 0.7, 
+        max_tokens: int = 256
+    ):
+        """
+        Initialize LLM Resolver Agent.
+        
+        Args:
+            provider: LLM provider ("gemini", "openai", "anthropic") or None for auto-detect
+            model: Model name or None for provider default
+            temperature: Sampling temperature
+            max_tokens: Maximum tokens to generate
+        """
+        try:
+            self.llm: Optional[BaseLLMProvider] = LLMProviderFactory.create(
+                provider=provider,
+                model=model
+            )
+            print(f"[LLM Resolver] Initialized with {self.llm}")
+        except ValueError as e:
+            print(f"[LLM Resolver] No LLM provider available: {e}")
+            self.llm = None
+        
         self.temperature = temperature
         self.max_tokens = max_tokens
 
     async def propose_target(self, step: Dict[str, Any], a11y_tree: Optional[Dict[str, Any]] = None, dom_distill: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
-        print(f"[LLM Resolver] Called with provider={self.provider}, model={self.model}")
+        """
+        Propose a target selector using LLM analysis of page inventories.
+        
+        Args:
+            step: Step context (action, target, text)
+            a11y_tree: Accessibility tree snapshot
+            dom_distill: DOM inventory
+        
+        Returns:
+            Proposed target dict with role/name/label/placeholder/text/css
+        """
         print(f"[LLM Resolver] Has a11y_tree: {a11y_tree is not None}, Has dom_distill: {dom_distill is not None}")
-        if not self.provider:
-            print("[LLM Resolver] No provider configured, returning empty dict")
+        
+        if not self.llm:
+            print("[LLM Resolver] No LLM provider configured, returning empty dict")
             return {}
 
         # Trim inventories for prompt size
@@ -58,53 +85,33 @@ class LLMResolverAgent:
         user_text = trim(user_payload, 10000)
 
         try:
-            if self.provider == "openai":
-                from openai import OpenAI
-                print(f"[LLM Resolver] Calling OpenAI {self.model}...")
-                client = OpenAI(api_key=self.api_key)
-                resp = client.chat.completions.create(
-                    model=self.model,
-                    temperature=self.temperature,
-                    max_tokens=self.max_tokens,
-                    messages=[
-                        {"role": "system", "content": PROMPT},
-                        {"role": "user", "content": user_text},
-                    ],
-                    response_format={"type": "json_object"},
-                )
-                txt = resp.choices[0].message.content
-                # Token usage (OpenAI)
-                try:
-                    usage = resp.usage
-                    if usage:
-                        print(f"[LLM Resolver] Tokens (OpenAI): prompt={usage.prompt_tokens}, completion={usage.completion_tokens}, total={usage.total_tokens}")
-                except Exception:
-                    pass
-            else:
-                import google.generativeai as genai
-                print(f"[LLM Resolver] Calling Gemini {self.model}...")
-                genai.configure(api_key=self.api_key)
-                model = genai.GenerativeModel(self.model, system_instruction=PROMPT)
-                resp = model.generate_content([user_text], generation_config={"temperature": self.temperature})
-                txt = resp.text
-                # Token usage (Gemini)
-                try:
-                    um = getattr(resp, "usage_metadata", None)
-                    if um:
-                        print(f"[LLM Resolver] Tokens (Gemini): prompt={um.prompt_token_count}, candidates={um.candidates_token_count}, total={um.total_token_count}")
-                except Exception:
-                    pass
+            print(f"[LLM Resolver] Calling {self.llm}...")
+            
+            # Use unified provider
+            txt = await self.llm.generate(
+                prompt=user_text,
+                system_instruction=PROMPT,
+                temperature=self.temperature,
+                max_tokens=self.max_tokens,
+                json_mode=True
+            )
+            
+            # Log token usage
+            usage = self.llm.get_usage()
+            if usage:
+                print(f"[LLM Resolver] Tokens: {usage}")
+            
             print(f"[LLM Resolver] Response: {txt}")
-            # Strip markdown code fences if present
+            
+            # Strip markdown code fences if present (some models still add them)
             txt = txt.strip()
             if txt.startswith("```"):
                 lines = txt.split("\n")
-                # Remove first line (```json or ```)
-                lines = lines[1:]
-                # Remove last line if it's ```
+                lines = lines[1:]  # Remove first line (```json or ```)
                 if lines and lines[-1].strip() == "```":
                     lines = lines[:-1]
                 txt = "\n".join(lines)
+            
             data = json.loads(txt)
             print(f"[LLM Resolver] Parsed JSON: {data}")
         except Exception as e:
@@ -116,9 +123,56 @@ class LLMResolverAgent:
         if not isinstance(data, dict):
             return {}
         clean = {k: v for k, v in data.items() if k in allowed_keys and (v is None or isinstance(v, str))}
+        
         # Normalize CSS selectors: replace single quotes with double quotes
         if "css" in clean and clean["css"]:
             clean["css"] = clean["css"].replace("'", '"')
+        
+        # If only 'name' is provided: prefer a11y-informed role inference before generic defaults
+        if "name" in clean and clean["name"] and not clean.get("role") and not clean.get("css"):
+            step_action = step.get("action") if step else None
+            name_lc = str(clean["name"]).strip()
+
+            # Try to infer role from a11y_tree
+            def iter_a11y(nodes):
+                if not nodes:
+                    return
+                if isinstance(nodes, dict):
+                    nodes = [nodes]
+                for n in nodes:
+                    try:
+                        n_name = (n.get("name") or n.get("accessibleName") or "").strip()
+                        n_role = n.get("role")
+                        if n_role and n_name and n_name.lower() == name_lc.lower():
+                            yield n_role
+                        for c in (n.get("children") or []):
+                            yield from iter_a11y(c)
+                    except Exception:
+                        continue
+
+            inferred_role = None
+            for r in iter_a11y(a11y_tree):
+                # Prefer searchbox/combobox/textbox order for type actions
+                if step_action in ["type", "get_text"] and r in ("searchbox", "combobox", "textbox"):
+                    inferred_role = r
+                    break
+                # For click, prefer button/link
+                if step_action == "click" and r in ("button", "link"):
+                    inferred_role = r
+                    break
+
+            if inferred_role:
+                clean["role"] = inferred_role
+                print(f"[LLM Resolver] A11y-inferred role='{inferred_role}' for name='{clean['name']}'")
+            else:
+                # Fallback defaults if a11y not helpful
+                if step_action in ["type", "get_text"]:
+                    clean["role"] = "textbox"
+                    print(f"[LLM Resolver] Defaulted role='textbox' for name='{clean['name']}'")
+                elif step_action == "click":
+                    clean["role"] = "button"
+                    print(f"[LLM Resolver] Defaulted role='button' for name='{clean['name']}'")
+        
         return clean
 
 
